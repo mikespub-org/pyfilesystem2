@@ -774,6 +774,7 @@ class FSTestCases(object):
 
         with self.fs.openbin("foo/hello", "w") as f:
             repr(f)
+            self.assertIn("b", f.mode)
             self.assertIsInstance(f, io.IOBase)
             self.assertTrue(f.writable())
             self.assertFalse(f.readable())
@@ -787,6 +788,7 @@ class FSTestCases(object):
 
         # Read it back
         with self.fs.openbin("foo/hello", "r") as f:
+            self.assertIn("b", f.mode)
             self.assertIsInstance(f, io.IOBase)
             self.assertTrue(f.readable())
             self.assertFalse(f.writable())
@@ -868,6 +870,11 @@ class FSTestCases(object):
             self.assertTrue(f.readable())
             self.assertFalse(f.closed)
             self.assertEqual(f.readlines(8), [b"Hello\n", b"World\n"])
+            self.assertEqual(f.tell(), 12)
+            buffer = bytearray(4)
+            self.assertEqual(f.readinto(buffer), 4)
+            self.assertEqual(f.tell(), 16)
+            self.assertEqual(buffer, b"foo\n")
             with self.assertRaises(IOError):
                 f.write(b"no")
         self.assertTrue(f.closed)
@@ -927,6 +934,7 @@ class FSTestCases(object):
         with self.fs.openbin("file.bin", "wb") as write_file:
             repr(write_file)
             text_type(write_file)
+            self.assertIn("b", write_file.mode)
             self.assertIsInstance(write_file, io.IOBase)
             self.assertTrue(write_file.writable())
             self.assertFalse(write_file.readable())
@@ -938,6 +946,7 @@ class FSTestCases(object):
         with self.fs.openbin("file.bin", "rb") as read_file:
             repr(write_file)
             text_type(write_file)
+            self.assertIn("b", read_file.mode)
             self.assertIsInstance(read_file, io.IOBase)
             self.assertTrue(read_file.readable())
             self.assertFalse(read_file.writable())
