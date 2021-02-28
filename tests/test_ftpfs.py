@@ -3,16 +3,15 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import socket
 import os
 import platform
 import shutil
+import socket
 import tempfile
 import time
 import unittest
 import uuid
 
-import pytest
 from six import text_type
 
 from ftplib import error_perm
@@ -27,6 +26,10 @@ from fs.path import join
 from fs.subfs import SubFS
 from fs.test import FSTestCases
 
+try:
+    from pytest import mark
+except ImportError:
+    from . import mark
 
 # Prevent socket timeouts from slowing tests too much
 socket.setdefaulttimeout(1)
@@ -85,6 +88,10 @@ class TestFTPFSClass(unittest.TestCase):
         self.assertIsInstance(ftp_fs, FTPFS)
         self.assertEqual(ftp_fs.host, "ftp.example.org")
 
+        ftps_fs = open_fs("ftps://will:wfc@ftp.example.org")
+        self.assertIsInstance(ftps_fs, FTPFS)
+        self.assertTrue(ftps_fs.tls)
+
 
 class TestFTPErrors(unittest.TestCase):
     """Test the ftp_errors context manager."""
@@ -129,7 +136,8 @@ class TestFTPErrors(unittest.TestCase):
         )
 
 
-@pytest.mark.slow
+@mark.slow
+@unittest.skipIf(platform.python_implementation() == "PyPy", "ftp unreliable with PyPy")
 class TestFTPFS(FSTestCases, unittest.TestCase):
 
     user = "user"
@@ -279,7 +287,8 @@ class TestFTPFSNoMLSD(TestFTPFS):
         pass
 
 
-@pytest.mark.slow
+@mark.slow
+@unittest.skipIf(platform.python_implementation() == "PyPy", "ftp unreliable with PyPy")
 class TestAnonFTPFS(FSTestCases, unittest.TestCase):
 
     user = "anonymous"

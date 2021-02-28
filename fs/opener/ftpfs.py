@@ -21,10 +21,9 @@ if typing.TYPE_CHECKING:
 
 @registry.install
 class FTPOpener(Opener):
-    """`FTPFS` opener.
-    """
+    """`FTPFS` opener."""
 
-    protocols = ["ftp"]
+    protocols = ["ftp", "ftps"]
 
     @CreateFailed.catch_all
     def open_fs(
@@ -49,6 +48,7 @@ class FTPOpener(Opener):
             passwd=parse_result.password,
             proxy=parse_result.params.get("proxy"),
             timeout=int(parse_result.params.get("timeout", "10")),
+            tls=bool(parse_result.protocol == "ftps"),
         )
         if dir_path:
             if create:
