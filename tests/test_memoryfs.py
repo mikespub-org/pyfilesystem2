@@ -66,3 +66,33 @@ class TestMemoryFS(FSTestCases, unittest.TestCase):
             "Memory usage increased after closing the file system; diff is %0.2f KiB."
             % (diff_close.size_diff / 1024.0),
         )
+
+    def test_copy_preserve_time(self):
+        self.fs.makedir("foo")
+        self.fs.makedir("bar")
+        self.fs.touch("foo/file.txt")
+
+        namespaces = ("details", "modified")
+        src_info = self.fs.getinfo("foo/file.txt", namespaces)
+
+        self.fs.copy("foo/file.txt", "bar/file.txt", preserve_time=True)
+        self.assertTrue(self.fs.exists("bar/file.txt"))
+
+        dst_info = self.fs.getinfo("bar/file.txt", namespaces)
+        self.assertEqual(dst_info.modified, src_info.modified)
+
+
+class TestMemoryFile(unittest.TestCase):
+    def setUp(self):
+        self.fs = memoryfs.MemoryFS()
+
+    def tearDown(self):
+        self.fs.close()
+
+    def test_readline_writing(self):
+        with self.fs.openbin("test.txt", "w") as f:
+            self.assertRaises(IOError, f.readline)
+
+    def test_readinto_writing(self):
+        with self.fs.openbin("test.txt", "w") as f:
+            self.assertRaises(IOError, f.readinto, bytearray(10))

@@ -49,6 +49,7 @@ from .error_tools import convert_os_errors
 from .mode import Mode, validate_open_mode
 from .errors import FileExpected, NoURL
 from ._url_tools import url_quote
+from .copy import copy_modified_time
 
 if typing.TYPE_CHECKING:
     from typing import (
@@ -431,8 +432,8 @@ class OSFS(FS):
         if hasattr(errno, "ENOTSUP"):
             _sendfile_error_codes.add(errno.ENOTSUP)
 
-        def copy(self, src_path, dst_path, overwrite=False):
-            # type: (Text, Text, bool) -> None
+        def copy(self, src_path, dst_path, overwrite=False, preserve_time=False):
+            # type: (Text, Text, bool, bool) -> None
             with self._lock:
                 # validate and canonicalise paths
                 _src_path, _dst_path = self._check_copy(src_path, dst_path, overwrite)
@@ -452,6 +453,8 @@ class OSFS(FS):
                             while sent > 0:
                                 sent = sendfile(fd_dst, fd_src, offset, maxsize)
                                 offset += sent
+                    if preserve_time:
+                        copy_modified_time(self, src_path, self, dst_path)
                 except OSError as e:
                     # the error is not a simple "sendfile not supported" error
                     if e.errno not in self._sendfile_error_codes:
@@ -461,8 +464,8 @@ class OSFS(FS):
 
     else:
 
-        def copy(self, src_path, dst_path, overwrite=False):
-            # type: (Text, Text, bool) -> None
+        def copy(self, src_path, dst_path, overwrite=False, preserve_time=False):
+            # type: (Text, Text, bool, bool) -> None
             with self._lock:
                 _src_path, _dst_path = self._check_copy(src_path, dst_path, overwrite)
                 shutil.copy2(self.getsyspath(_src_path), self.getsyspath(_dst_path))
@@ -475,6 +478,7 @@ class OSFS(FS):
             # type: (Text, Optional[Collection[Text]]) -> Iterator[Info]
             self.check()
             namespaces = namespaces or ()
+            requires_stat = not {"details", "stat", "access"}.isdisjoint(namespaces)
             _path = self.validatepath(path)
             if _WINDOWS_PLATFORM:
                 sys_path = os.path.join(
@@ -483,39 +487,47 @@ class OSFS(FS):
             else:
                 sys_path = self._to_sys_path(_path)  # type: ignore
             with convert_os_errors("scandir", path, directory=True):
-                for dir_entry in scandir(sys_path):
-                    info = {
-                        "basic": {
-                            "name": fsdecode(dir_entry.name),
-                            "is_dir": dir_entry.is_dir(),
+                scandir_iter = scandir(sys_path)
+                try:
+                    for dir_entry in scandir_iter:
+                        info = {
+                            "basic": {
+                                "name": fsdecode(dir_entry.name),
+                                "is_dir": dir_entry.is_dir(),
+                            }
                         }
-                    }
-                    if "details" in namespaces:
-                        stat_result = dir_entry.stat()
-                        info["details"] = self._make_details_from_stat(stat_result)
-                    if "stat" in namespaces:
-                        stat_result = dir_entry.stat()
-                        info["stat"] = {
-                            k: getattr(stat_result, k)
-                            for k in dir(stat_result)
-                            if k.startswith("st_")
-                        }
-                    if "lstat" in namespaces:
-                        lstat_result = dir_entry.stat(follow_symlinks=False)
-                        info["lstat"] = {
-                            k: getattr(lstat_result, k)
-                            for k in dir(lstat_result)
-                            if k.startswith("st_")
-                        }
-                    if "link" in namespaces:
-                        info["link"] = self._make_link_info(
-                            os.path.join(sys_path, dir_entry.name)
-                        )
-                    if "access" in namespaces:
-                        stat_result = dir_entry.stat()
-                        info["access"] = self._make_access_from_stat(stat_result)
+                        if requires_stat:
+                            stat_result = dir_entry.stat()
+                            if "details" in namespaces:
+                                info["details"] = self._make_details_from_stat(
+                                    stat_result
+                                )
+                            if "stat" in namespaces:
+                                info["stat"] = {
+                                    k: getattr(stat_result, k)
+                                    for k in dir(stat_result)
+                                    if k.startswith("st_")
+                                }
+                            if "access" in namespaces:
+                                info["access"] = self._make_access_from_stat(
+                                    stat_result
+                                )
+                        if "lstat" in namespaces:
+                            lstat_result = dir_entry.stat(follow_symlinks=False)
+                            info["lstat"] = {
+                                k: getattr(lstat_result, k)
+                                for k in dir(lstat_result)
+                                if k.startswith("st_")
+                            }
+                        if "link" in namespaces:
+                            info["link"] = self._make_link_info(
+                                os.path.join(sys_path, dir_entry.name)
+                            )
 
-                    yield Info(info)
+                        yield Info(info)
+                finally:
+                    if sys.version_info >= (3, 6):
+                        scandir_iter.close()
 
     else:
 
@@ -653,10 +665,10 @@ class OSFS(FS):
         if "details" in info:
             details = info["details"]
             if "accessed" in details or "modified" in details:
-                _accessed = typing.cast(int, details.get("accessed"))
-                _modified = typing.cast(int, details.get("modified", _accessed))
-                accessed = int(_modified if _accessed is None else _accessed)
-                modified = int(_modified)
+                _accessed = typing.cast(float, details.get("accessed"))
+                _modified = typing.cast(float, details.get("modified", _accessed))
+                accessed = float(_modified if _accessed is None else _accessed)
+                modified = float(_modified)
                 if accessed is not None or modified is not None:
                     with convert_os_errors("setinfo", path):
                         os.utime(sys_path, (accessed, modified))
