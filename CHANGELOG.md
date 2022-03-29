@@ -10,9 +10,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+- Replaced `appdirs` with `platformdirs` dependency 
+  ([#489](https://github.com/PyFilesystem/pyfilesystem2/pull/489)).
+- Make `fs.zipfs._ZipExtFile` use the seeking mechanism implemented
+  in the Python standard library in Python version 3.7 and later
+  ([#527](https://github.com/PyFilesystem/pyfilesystem2/pull/527)).
+- Mark `fs.zipfs.ReadZipFS` as a case-sensitive filesystem
+  ([#527](https://github.com/PyFilesystem/pyfilesystem2/pull/527)). 
+
+
+## [2.4.15] - 2022-02-07
+
+### Changed
+
 - Support more lenient usernames and group names in FTP servers
   ([#507](https://github.com/PyFilesystem/pyfilesystem2/pull/507)).
   Closes [#506](https://github.com/PyFilesystem/pyfilesystem2/issues/506).
+- Removed dependency on pytz ([#518](https://github.com/PyFilesystem/pyfilesystem2/pull/518)).
+  Closes [#516](https://github.com/PyFilesystem/pyfilesystem2/issues/518).
 
 ### Fixed
 
@@ -20,6 +35,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   resources, causing `MemoryFS.scandir` to use the old name.
   ([#510](https://github.com/PyFilesystem/pyfilesystem2/pull/510)).
   Closes [#509](https://github.com/PyFilesystem/pyfilesystem2/issues/509).
+- Make `WrapFS.move` and `WrapFS.movedir` use the delegate FS methods instead
+  of `fs.move` functions, which was causing optimized implementation of 
+  `movedir` to be always skipped.
+  ([#511](https://github.com/PyFilesystem/pyfilesystem2/pull/511)).
 
 
 ## [2.4.14] - 2021-11-16
