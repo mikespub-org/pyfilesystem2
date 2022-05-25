@@ -1,10 +1,9 @@
 from __future__ import unicode_literals
 
 import shutil
+import six
 import tempfile
 import unittest
-
-import six
 
 try:
     from unittest import mock
@@ -30,7 +29,7 @@ class _TestAppFS(fs.test.FSTestCases):
 
     def make_fs(self):
         with mock.patch(
-            "platformdirs.{}".format(self.AppFS.app_dir),
+            "appdirs.{}".format(self.AppFS.app_dir),
             autospec=True,
             spec_set=True,
             return_value=tempfile.mkdtemp(dir=self.tmpdir),

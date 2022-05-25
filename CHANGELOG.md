@@ -8,15 +8,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+
+## [2.4.16] - 2022-05-02
+
 ### Changed
 
-- Replaced `appdirs` with `platformdirs` dependency 
-  ([#489](https://github.com/PyFilesystem/pyfilesystem2/pull/489)).
 - Make `fs.zipfs._ZipExtFile` use the seeking mechanism implemented
   in the Python standard library in Python version 3.7 and later
   ([#527](https://github.com/PyFilesystem/pyfilesystem2/pull/527)).
 - Mark `fs.zipfs.ReadZipFS` as a case-sensitive filesystem
   ([#527](https://github.com/PyFilesystem/pyfilesystem2/pull/527)). 
+- Optimized moving files between filesystems with syspaths.
+  ([#523](https://github.com/PyFilesystem/pyfilesystem2/pull/523)).
+- Fixed `fs.move.move_file` to clean up the copy on the destination in case of errors.
+- `fs.opener.manage_fs` with `writeable=True` will now raise a `ResourceReadOnly`
+  exception if the managed filesystem is not writeable.
+- Marked filesystems wrapped with `fs.wrap.WrapReadOnly` as read-only.
 
 
 ## [2.4.15] - 2022-02-07
